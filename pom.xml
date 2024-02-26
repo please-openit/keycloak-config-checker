@@ -12,7 +12,10 @@
 
     <properties>
         <java.version>1.8</java.version>
-        <keycloak.version>22.0.3</keycloak.version>
+        <keycloak.version>23.0.7</keycloak.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
 <!--        <version.jboss>3.3.0.Final</version.jboss>-->
 <!--        <version.jboss-ejb-api>1.0.0.Final</version.jboss-ejb-api>-->
         <jboss.logging.version>3.4.1.Final</jboss.logging.version>
@@ -49,30 +52,35 @@
             <version>${keycloak.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
     </dependencies>
+
 
     <build>
         <finalName>config-checker</finalName>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.3.0</version>
                 <configuration>
-                    <source>11</source>
-                    <target>11</target>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifestEntries>
-                            <Dependencies>org.keycloak.keycloak-services</Dependencies>
-                        </manifestEntries>
-                    </archive>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
                     <outputDirectory>deployments</outputDirectory>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

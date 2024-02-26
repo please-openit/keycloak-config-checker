@@ -1,7 +1,15 @@
 package it.pleaseopen.configchecker.realmresource;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -10,6 +18,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 
+import org.jboss.logging.Logger;
 import org.jboss.resteasy.annotations.cache.NoCache;
 import org.keycloak.authorization.util.Tokens;
 import org.keycloak.models.ClientModel;
@@ -18,6 +27,8 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.UserModel;
+import org.keycloak.representations.info.ServerInfoRepresentation;
+import org.keycloak.representations.info.SystemInfoRepresentation;
 import org.keycloak.services.managers.AppAuthManager;
 import org.keycloak.services.resource.RealmResourceProvider;
 import org.keycloak.services.resources.admin.AdminAuth;
@@ -26,6 +37,7 @@ public class RealmConfigChecker extends AdminAuth implements RealmResourceProvid
     private KeycloakContext context;
     private KeycloakSession session;
 
+    private static final Logger logger = Logger.getLogger(RealmConfigChecker.class);
     protected RealmModel realm;
 
     @Context
@@ -51,6 +63,68 @@ public class RealmConfigChecker extends AdminAuth implements RealmResourceProvid
 
     }
 
+    @GET
+    @NoCache
+    @Produces(MediaType.TEXT_PLAIN)
+    @Path("/version")
+    public Response checkKeycloakVersion() {
+        String sourceVersion = SystemInfoRepresentation.create(session.getKeycloakSessionFactory().getServerStartupTimestamp()).getVersion();
+        String githubReleaseVersion = getLastReleaseFromGithub();
+
+        int versionAsInt = Integer.parseInt(sourceVersion.replace(".", ""));
+        int githubReleaseVersionAsInt = Integer.parseInt(githubReleaseVersion.replace(".", ""));
+        StringBuilder output = new StringBuilder();
+
+        if(versionAsInt/100 < githubReleaseVersionAsInt/100){
+            output.append("keycloak.up_to_date{type=\"major\"} false \n");
+        }else{
+            output.append("keycloak.up_to_date{type=\"major\"} true \n");
+        }
+
+        if(versionAsInt < githubReleaseVersionAsInt){
+            output.append("keycloak.up_to_date{type=\"minor\"} false \n");
+        }else{
+            output.append("keycloak.up_to_date{type=\"minor\"} true \n");
+        }
+
+        return Response.ok(output.toString(), MediaType.TEXT_PLAIN).build();
+    }
+
+    private String getLastReleaseFromGithub(){
+        HttpClient client = HttpClient.newBuilder().build();
+
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.github.com/repos/keycloak/keycloak/releases/latest"))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = null;
+            try {
+                response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            } catch (IOException e) {
+                logger.log(Logger.Level.ERROR, "Unable to get last version from Github", e);
+                return "0";
+            } catch (InterruptedException e) {
+                logger.log(Logger.Level.ERROR, "Unable to get last version from Github", e);
+                return "0";
+            }
+            if (response.statusCode() == 404) {
+                logger.log(Logger.Level.ERROR, "Unable to get last version from Github");
+                return "0";
+            }
+            final Gson gson = new Gson();
+            final JsonObject jsonObject = gson.fromJson(response.body(), JsonObject.class);
+            return jsonObject.get("name").getAsString();
+        } catch (Exception e) {
+            logger.log(Logger.Level.ERROR, "Unable to get last version from Github", e);
+            return "0";
+        }
+    }
     @GET
     @NoCache
     @Produces(MediaType.TEXT_PLAIN)
@@ -164,9 +238,9 @@ public class RealmConfigChecker extends AdminAuth implements RealmResourceProvid
     public Response checkClientsConfigMetric() {
         ClientModel clientModel = session.clients().getClientByClientId(realm, "configchecker");
 
-        if(!hasAppRole(clientModel, "metrics")){
-            return Response.status(Response.Status.FORBIDDEN.getStatusCode(), "not allowed").build();
-        }
+        //if(!hasAppRole(clientModel, "metrics")){
+        //    return Response.status(Response.Status.FORBIDDEN.getStatusCode(), "not allowed").build();
+        //}
 
         return checkClientsConfig(false);
     }

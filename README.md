@@ -12,22 +12,22 @@ Copy deployments/config-checker.jar to /providers/ directory in Keycloak.
 
 ### Usage
 
-**For each realm** 
+**For each realm**
 
 #### Prometheus endpoints
 
 Returns a single metric, the number of times the problem occurs. **best performance on those endpoints, use them for an automatic checker such as prometheus**.
 
-
 - /realms/master/config-checker/realm/check
+
   - brute_force_disabled
   - reset_password_and_verify_email_and_login_with_email
   - reset_password_and_email_server
   - access_token_lifespan_is_too_long
   - events_are_saved
   - default_role_offline_access
-
 - /realms/master/config-checker/clients/check
+
   - clients_with_refresh_token_on_client_credentials
   - implicit_flow_enabled
   - direct_access_grant_enabled
@@ -37,13 +37,14 @@ Returns a single metric, the number of times the problem occurs. **best performa
   - access_token_lifespan_too_long
   - roles_scope_as_default
   - offline_scope_as_default
-
 - /realms/master/config-checker/users/check
+
   - users_with_offline_access
   - users_with_admin_role_on_master
   - users_with_realm_management
+- /realms/master/config-checker/version
 
-#### Details endpoints 
+#### Details endpoints
 
 - /realms/master/config-checker/realm/check/details
 - /realms/master/config-checker/clients/check/details
@@ -95,7 +96,7 @@ This option is for compatibility reasons. A client credentials does not output a
 
 Not recommended for use.
 
-Must be enabled only for hybrid flow. 
+Must be enabled only for hybrid flow.
 
 ### Bad redirect URI
 
@@ -157,3 +158,18 @@ Check users that have multiple admin roles on realms.
 
 Users that has all admin control.
 
+## Version
+
+Check if your version of Keycloak is the last.
+
+Checks from the last release from https://github.com/keycloak/keycloak/releases
+
+```
+keycloak.up_to_date{type="major"}
+```
+"true" if your keycloak major release is up to date.
+
+```
+keycloak.up_to_date{type="minor"}
+```
+"true" if your keycloak minor release is up to date. Always "false" if major release is not up to date.
